@@ -6,7 +6,7 @@ __pycache__/
 # Virtual environment
 .venv/
 # Data files
-data/raw/
+data/
 *.csv
 *.zip
 # Models
