@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+# Virtual environment
+.venv/
+# Data files
+data/raw/
+*.csv
+*.zip
+# Models
+models/
+# MLflow
+mlruns/
+# Environment
+.env
+# OS
+.DS_Store
+Thumbs.db
