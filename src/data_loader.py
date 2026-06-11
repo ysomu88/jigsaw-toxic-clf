@@ -37,11 +37,12 @@ def split_data(df: pd.DataFrame, test_size: float = 0.2, random_state: int = 42)
     """Split the dataframe into train and test sets."""
     X, y = get_features_and_labels(df)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=random_state
+    )
 
     print(f"Train set size: {len(X_train)}")
     print(f"Test set size: {len(X_test)}")
 
     return (X_train, X_test, y_train, y_test)
-
 

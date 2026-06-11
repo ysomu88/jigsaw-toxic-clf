@@ -1,65 +1,52 @@
 import os
 import sys
-from typing import List, Dict
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 import uvicorn
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-
-def clean_text(text: str) -> str:  # noqa: E501
-    """Clean the input text by converting to lowercase and removing extra whitespace."""
-    return ' '.join(str(text).lower().split())
-
-
-LABELS = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]  # noqa: F811
-
 from src.train import load_model
-model, vectorizer = load_model()
+from src.preprocess import clean_text
 
+LABELS = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]
+app = FastAPI(title="Toxic Comment Classifier", version="1.0.0")
 
-app = FastAPI(title="Toxic Comment Classifier")
-
+try:
+    model, vectorizer = load_model()
+except Exception:
+    model = None
+    vectorizer = None
 
 class CommentRequest(BaseModel):
     text: str
 
-
 class PredictionResponse(BaseModel):
     text: str
-    predictions: Dict[str, int]  # noqa: F812
+    predictions: dict
     is_toxic: bool
 
 @app.get("/")
-async def root():
-    return {"status": "ok", "message": "Toxic Comment Classifier API"}
+def root():
+    return {"status": "ok", "message": "Toxic Comment Classifier API", "model_loaded": model is not None}
 
-
-def vectorize_and_predict(text):
-    cleaned_text = clean_text(text)
-    
-    features = vectorizer.transform([cleaned_text])  # noqa: E501
-    
-    preds_list = model.predict(features)[0]
-    return {LABELS[i]: int(preds_val) for i, preds_val in enumerate(preds_list)}
-
+@app.get("/health")
+def health():
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+    return {"status": "healthy"}
 
 @app.post("/predict")
-async def predict(request: CommentRequest):
-    if not request.text.strip():  # noqa: E712 (explicit check for empty string is preferred over falsy checks with .strip())
-        raise HTTPException(status_code=400, detail="Text input cannot be empty.")
+def predict(request: CommentRequest):
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded. Run the training pipeline first.")
     
-    predictions = vectorize_and_predict(request.text)
+    cleaned_text = clean_text(request.text)
+    features = vectorizer.transform([cleaned_text])
+    preds = model.predict(features)
+    predictions = {label: int(preds[0][i]) for i, label in enumerate(LABELS)}
+    is_toxic = any(v == 1 for v in predictions.values())
 
-    return PredictionResponse(
-        text=request.text, 
-        predictions=predictions, 
-        is_toxic=True if any(pred_val == 1 for pred_val in predictions.values()) else False # noqa: E712
-    )
-
-
+    return PredictionResponse(text=request.text, predictions=predictions, is_toxic=is_toxic)
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
 
