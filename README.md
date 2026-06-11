@@ -47,7 +47,6 @@ python run_pipeline.py
 python api/main.py
 ```
 
-### For Non-Technical Users
 Simply send text to the API endpoint and receive instant feedback about whether it contains harmful language.
 
 ## Key Features
